@@ -487,14 +487,72 @@ function registerPlayer(player) {
     players.add(player);
 }
 
+function isDecorativeVideo(player) {
+    // --- High-Confidence Checks (Instant return) ---
+
+    // Already covered, but good to keep it here.
+    if (player.hasAttribute('playsinline')) {
+        return true;
+    }
+
+    // Explicitly hidden from assistive technologies = decorative.
+    if (player.getAttribute('aria-hidden') === 'true') {
+        return true;
+    }
+
+    // The classic background video combination.
+    if (player.muted && player.autoplay && player.loop) {
+        return true;
+    }
+
+    // --- Heuristic Scoring ---
+    // Let's create a score. If it reaches a certain threshold, we'll call it decorative.
+    let score = 0;
+    const computedStyle = getComputedStyle(player);
+
+    if (player.muted) score++;
+    if (player.loop) score++;
+    if (!player.controls) score++;
+
+    // Negative z-index is a very strong signal.
+    if (parseInt(computedStyle.zIndex, 10) < 0) {
+        score += 3;
+    }
+
+    // Ignoring user interaction is another strong signal.
+    if (computedStyle.pointerEvents === 'none') {
+        score += 2;
+    }
+
+    // A video without an audio track is very likely decorative.
+    // Note: audioTracks.length might be 0 until metadata loads.
+    if ((player.audioTracks && player.audioTracks.length === 0) || player.mozHasAudio === false) {
+        score += 2;
+    }
+
+    // Set a threshold. A score of 3 or more seems reasonable.
+    // e.g., (muted + loop + !controls) would trigger it.
+    // e.g., a single z-index < 0 would trigger it.
+    return score >= 3;
+}
+
 function findAllPlayersFromNode(node) {
     if (typeof node.getElementsByTagName !== "function") {
         return [];
     }
 
-    return [...node.getElementsByTagName("video"), ...node.getElementsByTagName("audio")];
-}
+    const allPlayers = [...node.getElementsByTagName("video"), ...node.getElementsByTagName("audio")];
 
+    // Use our new function to filter out all decorative players
+    const filteredPlayers = allPlayers.filter(player => !isDecorativeVideo(player));
+
+    // Optional: Log what you're doing for easy debugging.
+    if (allPlayers.length > filteredPlayers.length) {
+        console.log(`KDE Integration: Ignored ${allPlayers.length - filteredPlayers.length} decorative media elements.`);
+    }
+
+    return filteredPlayers;
+}
 
 function registerAllPlayers() {
     var players = findAllPlayersFromNode(document);
