@@ -541,17 +541,7 @@ function findAllPlayersFromNode(node) {
         return [];
     }
 
-    const allPlayers = [...node.getElementsByTagName("video"), ...node.getElementsByTagName("audio")];
-
-    // Use our new function to filter out all decorative players
-    const filteredPlayers = allPlayers.filter(player => !isDecorativeVideo(player));
-
-    // Optional: Log what you're doing for easy debugging.
-    if (allPlayers.length > filteredPlayers.length) {
-        console.log(`KDE Integration: Ignored ${allPlayers.length - filteredPlayers.length} decorative media elements.`);
-    }
-
-    return filteredPlayers;
+    return [...node.getElementsByTagName("video"), ...node.getElementsByTagName("audio")].filter(player => !isDecorativeVideo(player));
 }
 
 function registerAllPlayers() {
